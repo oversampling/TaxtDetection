@@ -1,3 +1,4 @@
+import logging
 import math
 import numpy as np
 from ultralytics import YOLO
@@ -51,23 +52,32 @@ class TrainYOLO:
 
     def detect(self, imgPath: str, saveImagePath: str = None) -> list[Coords]:
         results = self.model(imgPath)
-        Coords = []
+        bounding_box: list[Coords] = []
         for result in results:
-            boxes = result.boxes.xyxy[0].tolist()
+            for box in result.boxes:
+                for xyxy in box.xyxy:
+                    coord = Coords(xyxy[0], xyxy[1], xyxy[2], xyxy[3])
+                    bounding_box.append(coord)
             im_array = result.plot()  # plot a BGR numpy array of predictions
             im = Image.fromarray(im_array[..., ::-1])  # RGB PIL image
             if saveImagePath:
+                logging.info(f"Saving image to {saveImagePath}")
                 im.save(saveImagePath)
-        return Coords
+        return bounding_box
 
     def export(self):
-        import logging
         path = self.model.export(format="onnx")
         logging.info(f"Exported model to {path}")
+        return self
+
+    def load(self, model_fn='yolov8n.pt'):
+        self.model = YOLO(model_fn)
         return self
 
 if __name__ == "__main__":
     dataConf = 'config.yml'
     model = TrainYOLO()
-    model.train(dataConf, 50).detect('./data/test/images/00053.jpg')
+    bounding_box: list[Coords] = model.load("./runs/detect/train15/weights/best.pt").detect("./data/test/images/00050.jpg")
+    print(bounding_box[0])
+    # model.train(dataConf, epochs=50, resume=False)
     # TrainYOLO().export()
