@@ -25,6 +25,7 @@ class Coords:
             cv2.imshow('image', bounding_box_img)
             cv2.waitKey(0)
         if saveImagePath:
+            logging.log(1, "Saving image to {saveImagePath}")
             cv2.imwrite(img=bounding_box_img, filename=saveImagePath)
         return bounding_box_img
     
@@ -40,14 +41,10 @@ class Coords:
 
 class TrainYOLO:
     def __init__(self, model_fn='yolov8n.pt'):
-        self.model = YOLO(model_fn)  # load a .pt file
+        self.load(model_fn)
 
-    def train(self, dataConf, epochs, resume=False):
-        self.model.train(data=dataConf, epochs=epochs, resume=resume)
-        return self
-    
-    def export(self):
-        self.model.export()
+    def train(self, dataConf, epochs, amp, resume=False):
+        self.model.train(data=dataConf, epochs=epochs, resume=resume, amp=amp)
         return self
 
     def detect(self, imgPath: str, saveImagePath: str = None) -> list[Coords]:
@@ -67,17 +64,25 @@ class TrainYOLO:
 
     def export(self):
         path = self.model.export(format="onnx")
-        logging.info(f"Exported model to {path}")
+        logging.info(1, f"Exported model to {path}")
         return self
 
     def load(self, model_fn='yolov8n.pt'):
         self.model = YOLO(model_fn)
         return self
+    
+    def validate(self):
+        metrics = self.model.val()
+        print(metrics)
+        return self
 
 if __name__ == "__main__":
     dataConf = 'config.yml'
-    model = TrainYOLO()
-    bounding_box: list[Coords] = model.load("./runs/detect/train15/weights/best.pt").detect("./data/test/images/00050.jpg")
-    print(bounding_box[0])
-    # model.train(dataConf, epochs=50, resume=False)
-    # TrainYOLO().export()
+    model = TrainYOLO().train(dataConf, epochs=150, amp=False).export()
+    # bounding_box: list[Coords] = model.detect("./data/test/images/00050.jpg", saveImagePath="./draw.jpg")
+    # bx = TrainYOLO("best.pt").detect("./test.jpg", saveImagePath="./draw.jpg")
+    # print(bx)
+    # bounding_box: list[Coords] = model.load("yolov8n.pt").detect("./data/test/images/00050.jpg", saveImagePath="./draw.jpg")
+    # print(bounding_box[0])
+    # model.train(dataConf, epochs=50).export()
+    # model.detect("./data/test/images/00050.jpg", saveImagePath="./draw.jpg")
