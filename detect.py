@@ -18,7 +18,7 @@ class Coords:
     def __str__(self):
         return f'({self.x1}, {self.y1}, {self.x2}, {self.y2})'
 
-    def drawBoundingBox(self, imgPath: str, saveImagePath: str = None, openImg: bool = False) -> Mat:
+    def drawBoundingBox(self, imgPath: str | None, saveImagePath: str = None, openImg: bool = False) -> Mat:
         img = cv2.imread(imgPath)
         bounding_box_img = cv2.rectangle(img, (math.floor(self.x1), math.ceil(self.y1)), (math.ceil(self.x2), math.floor(self.y2)), (0, 255, 0), 2)
         if openImg:
@@ -78,7 +78,7 @@ class TrainYOLO:
 
 if __name__ == "__main__":
     dataConf = 'config.yml'
-    model = TrainYOLO().train(dataConf, epochs=150, amp=False).export()
+    model = TrainYOLO().train(dataConf, epochs=200, amp=False).export()
     # bounding_box: list[Coords] = model.detect("./data/test/images/00050.jpg", saveImagePath="./draw.jpg")
     # bx = TrainYOLO("best.pt").detect("./test.jpg", saveImagePath="./draw.jpg")
     # print(bx)
