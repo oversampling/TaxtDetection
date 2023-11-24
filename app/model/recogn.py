@@ -4,7 +4,7 @@ import numpy as np
 
 Mat = np.ndarray
 
-class Recog:
+class Recogn:
     def __init__(self):
         self.reader = easyocr.Reader(['en'])
         self.result = None
@@ -15,10 +15,6 @@ class Recog:
 
     def preprocess(self, imgPath: str, saveImagePath = None) -> Mat:
         image = cv2.imread(imgPath)
-        alpha = 0
-        beta = 0
-        adjusted  = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
-        cv2.imwrite("adjusted.jpg", adjusted)
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
         binary = cv2.medianBlur(binary, 5)
@@ -26,8 +22,3 @@ class Recog:
             cv2.imwrite(saveImagePath, binary)
         return self
     
-if __name__ == '__main__':
-    recog = Recog()
-    recog.preprocess("crop.jpg", "binary.jpg")
-    # recog.read("binary.jpg")
-    # print(recog.result)
