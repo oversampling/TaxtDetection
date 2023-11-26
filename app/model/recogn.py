@@ -3,8 +3,6 @@ from cv2.typing import MatLike
 import easyocr
 import numpy as np
 
-Mat = np.ndarray
-
 class Recogn:
     def __init__(self):
         self.reader = easyocr.Reader(['en'])
@@ -14,8 +12,9 @@ class Recogn:
         self.result = self.reader.readtext(imgPath)
         return self
 
-    def preprocess(self, imgPath: str, saveImagePath = None) -> Mat:
-        image = cv2.imread(imgPath)
+    def preprocess(self, image: MatLike, imgPath: str = None, saveImagePath = None) -> MatLike:
+        if imgPath:
+            image = cv2.imread(imgPath)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
         image = self.remove_shadow(image)
         mean = image.mean()
