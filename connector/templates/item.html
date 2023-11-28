@@ -24,10 +24,16 @@
         let btn_start_cam = document.getElementById("btn_start_cam");
         let interval;
         btn_start_cam.addEventListener("click", () => {
+            fetch("/stream/start", {
+                method: "POST",
+            });
             interval = startStream(1000);
         });
         let btn_stop_cam = document.getElementById("btn_stop_cam");
         btn_stop_cam.addEventListener("click", () => {
+            fetch("/stream/stop", {
+                method: "POST",
+            });
             interval && stopStream(interval);
         });
     </script>
