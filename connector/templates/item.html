@@ -23,10 +23,16 @@
         }
         let btn_start_cam = document.getElementById("btn_start_cam");
         let interval;
-        btn_start_cam.addEventListener("click", () => {
-            fetch("/stream/start", {
+        btn_start_cam.addEventListener("click", async () => {
+            let response = await fetch("/stream/start", {
                 method: "POST",
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                 },
+                body: JSON.stringify({tag: "{{ tag }}"}),
             });
+            console.log(response)
             interval = startStream(1000);
         });
         let btn_stop_cam = document.getElementById("btn_stop_cam");
