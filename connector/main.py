@@ -34,8 +34,7 @@ async def tag_recogn(request: Request, tag: Union[str, str]):
 @app.post("/stream/start", dependencies=[Depends(cookie)], status_code=200)
 async def accessing_camera(session_id: UUID = Depends(cookie)):
     session_id = str(session_id)
-    print(session_id)
-    fetcher = ImageFetcher(CAM_URL, session_id, 1)
+    fetcher = ImageFetcher(CAM_URL, session_id, 0.2)
     fetcher.start()
     imageFetchers[session_id] = fetcher
     return session_id

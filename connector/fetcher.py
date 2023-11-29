@@ -17,10 +17,8 @@ class ImageFetcher(threading.Thread):
             # Fetch image from URL
             try:
                 response = requests.get(self.url)
-                img_arr = np.array(bytearray(response.content), dtype=np.uint8) 
-                img = cv2.imdecode(img_arr, -1) 
-                frame = imutils.resize(img, width=1000, height=1800) 
-                cv2.imwrite(f"static/img-{self.session_id}.jpg", frame)
+                with open(f"static/img-{self.session_id}.jpg", "wb") as f:
+                    f.write(response.content)
                 files = {'file': open(f'img-{self.session_id}.jpg', 'rb')}
                 # Send to recognition
             except Exception as e:
