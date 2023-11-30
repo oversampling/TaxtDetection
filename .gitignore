@@ -5,3 +5,5 @@ __pycache__
 img.jpg
 *.pt
 .env
+*.log
+img-*.jpg

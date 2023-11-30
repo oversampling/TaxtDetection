@@ -42,10 +42,14 @@ class ImageFetcher(threading.Thread):
         self._stop_event.set()
 
 class Stream(threading.Thread):
-    def __init__(self, url, tag):
+    def __init__(self, url: str, tags: list[str]):
         super().__init__()
-        self.url = url
-        self.tag = tag
+        self.url: str = url
+        self.tags: list[str] = []
+        for tag in tags:
+            processedTag = ''.join([char for char in tag if char.isalpha() or char.isdigit()])
+            processedTag = processedTag.lower()
+            self.tags.append(processedTag)
         self.resp = []
         self._stop_event = threading.Event()
 
@@ -73,12 +77,11 @@ class Stream(threading.Thread):
                             resultText = resultText.lower()
                             # Remove all non-alphanumeric characters
                             resultText = ''.join([char for char in resultText if char.isalpha() or char.isdigit()])
-                            processedTag = ''.join([char for char in self.tag if char.isalpha() or char.isdigit()])
-                            processedTag = processedTag.lower()
-                            if resultText == processedTag:
+                            if resultText in self.tags:
                                 print("!!!!!!!!!!!!!!!!!!!!!!!!DETECTED!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                                logging.info(f"Detected: {resultText} With Confidence of {result[2]}")
                                 break
-                            self.resp.append({"text": result[1], "confidence": result[2]})
+                            self.resp.append({"text": resultText, "confidence": result[2]})
                 _, frame = cv2.imencode('.jpeg', frame)
                 time.sleep(0.3)
         except KeyboardInterrupt:

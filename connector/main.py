@@ -19,7 +19,7 @@ RECONG_URL = os.getenv("RECONG_URL")
 app = FastAPI()
 
 class TagDetail(BaseModel):
-    tag: str
+    tags: list[str]
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -27,20 +27,20 @@ templates = Jinja2Templates(directory="templates")
 imageFetchers: dict[str, ImageFetcher] = {}
 streams: dict[str, Stream] = {}
 @app.get("/ipcam", response_class=HTMLResponse)
-async def tag_recogn(request: Request, tag: Union[str, str]):   
+async def tag_recogn(request: Request, tags: Union[str, str]):   
     session = uuid4()
     data = CameraSessionData(start=False)
     await backend.create(session, data)
-    resp = templates.TemplateResponse("item.html", {"request": request, "img_url": f"/static/img-{session}.jpg", "tag": tag})
+    resp = templates.TemplateResponse("item.html", {"request": request, "img_url": f"/static/img-{session}.jpg", "tags": tags})
     cookie.attach_to_response(resp, session)
     return resp
 
 @app.post("/stream/start", dependencies=[Depends(cookie)], status_code=200)
-async def accessing_camera( tag: TagDetail, session_id: UUID = Depends(cookie)):
+async def accessing_camera( tags: TagDetail, session_id: UUID = Depends(cookie)):
     session_id = str(session_id)
     fetcher = ImageFetcher(CAM_URL, session_id, 0.2)
     fetcher.start()
-    stream = Stream(CAM_URL, tag.tag)
+    stream = Stream(CAM_URL, tags.tags)
     stream.start()
     imageFetchers[session_id] = fetcher
     streams[session_id] = stream

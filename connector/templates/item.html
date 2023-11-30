@@ -5,7 +5,12 @@
 </head>
 <body>
     <h1>Camera URL: {{ img_url }}</h1>
-    <h1>Tag: {{ tag }}</h1>
+    <h1>Tag: {{ tags }}</h1>
+    <p><h3>
+    {% for tag in (tags).split(",") %}
+       {{ loop.index }}: </i>{{ tag + " "}}</i>  <br/>
+    {% endfor %}
+    </h3></p>
     <img name="main" id="main" width="640" height="480" src="{{ img_url }}">
     <button id="btn_start_cam">Start</button>
     <button id="btn_stop_cam">Stop</button>
@@ -21,6 +26,7 @@
         function stopStream(interval) {
             clearInterval(interval);
         }
+        let tagsList = "{{ tags }}".split(",")
         let btn_start_cam = document.getElementById("btn_start_cam");
         let interval;
         btn_start_cam.addEventListener("click", async () => {
@@ -30,7 +36,7 @@
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                  },
-                body: JSON.stringify({tag: "{{ tag }}"}),
+                body: JSON.stringify({tags: tagsList}),
             });
             console.log(response)
             interval = startStream(1000);
