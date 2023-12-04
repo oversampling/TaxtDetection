@@ -8,3 +8,4 @@ img.jpg
 *.log
 img-*.jpg
 user_list
+.db

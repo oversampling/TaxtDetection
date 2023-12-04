@@ -97,25 +97,12 @@ async def tag_recogn(request: Request, user: Union[str, str]):
     cookie.attach_to_response(resp, session)
     return resp
 
-# @app.post("/stream/start", dependencies=[Depends(cookie)], status_code=200)
-# async def accessing_camera( tags: TagDetail, session_id: UUID = Depends(cookie)):
-#     session_id = str(session_id)
-#     fetcher = ImageFetcher(CAM_URL, session_id, 0.2)
-#     fetcher.start()
-#     stream = Stream(CAM_URL, tags.tags)
-#     stream.start()
-#     imageFetchers[session_id] = fetcher
-#     streams[session_id] = stream
-#     return session_id
-
 @app.post("/stream/start", dependencies=[Depends(cookie)], status_code=200)
-async def accessing_camera( user: str, session_id: UUID = Depends(cookie)):
+async def accessing_camera( tags: TagDetail, session_id: UUID = Depends(cookie)):
     session_id = str(session_id)
     fetcher = ImageFetcher(CAM_URL, session_id, 0.2)
     fetcher.start()
-    tags: list[str] = []
-    requests(f"/static/user_list/{user}.htm")
-    stream = Stream(CAM_URL, tags)
+    stream = Stream(CAM_URL, tags.tags)
     stream.start()
     imageFetchers[session_id] = fetcher
     streams[session_id] = stream

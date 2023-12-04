@@ -10,6 +10,7 @@ import pyttsx3
 
 from model.detect import Coords, Detect
 from model.recogn import Recogn
+from model.SQLconnector import DetectionCache
 
 logging.basicConfig(filename='fetcher.log', encoding='utf-8', level=logging.DEBUG)
 
@@ -47,10 +48,12 @@ class Stream(threading.Thread):
         super().__init__()
         self.url: str = url
         self.tags: list[str] = []
+        detection_cache = DetectionCache()
         for tag in tags:
             processedTag = ''.join([char for char in tag if char.isalpha() or char.isdigit()])
             processedTag = processedTag.lower()
             self.tags.append(processedTag)
+            detection_cache.addTagDetectionCache(processedTag)
         self.resp = []
         self._stop_event = threading.Event()
 
