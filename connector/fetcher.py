@@ -6,6 +6,7 @@ import time
 import os
 from dotenv import load_dotenv
 import logging
+import pyttsx3
 
 from model.detect import Coords, Detect
 from model.recogn import Recogn
@@ -56,8 +57,8 @@ class Stream(threading.Thread):
     def run(self):
         # video = cv2.VideoCapture(0)
         model = Detect("best.pt")
-
-        # initial_frame = 
+        detected_tag = {tag: False for tag in self.tags}
+        voice_engine = pyttsx3.init()
         recog = Recogn()
         try:
             while not self._stop_event.is_set():
@@ -78,8 +79,13 @@ class Stream(threading.Thread):
                             # Remove all non-alphanumeric characters
                             resultText = ''.join([char for char in resultText if char.isalpha() or char.isdigit()])
                             if resultText in self.tags:
-                                print("!!!!!!!!!!!!!!!!!!!!!!!!DETECTED!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                                logging.info(f"Detected: {resultText} With Confidence of {result[2]}")
+                                if detected_tag[resultText] != True:
+                                    detected_tag[resultText] = True
+                                    processedResultText = ' '.join(c for c in resultText)
+                                    voice_response = f"Detected {processedResultText}"
+                                    voice_engine.say(voice_response)
+                                    voice_engine.runAndWait()
+                                    logging.info(f"Detected: {resultText} With Confidence of {result[2]}")
                                 break
                             self.resp.append({"text": resultText, "confidence": result[2]})
                 _, frame = cv2.imencode('.jpeg', frame)
