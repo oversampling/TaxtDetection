@@ -9,9 +9,15 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from uuid import UUID, uuid4
+# from model.SQLconnector import DetectionCache
 from fetcher import ImageFetcher, Stream
 from session.camera import CameraSessionData, backend, cookie, verifier
 from pydantic import BaseModel
+from model import cache_controller
+from model.SQLconnector import Base, engine, SessionLocal
+from sqlalchemy.orm import Session
+
+Base.metadata.create_all(bind=engine)
 
 load_dotenv()
 CAM_URL = os.getenv("CAM_URL")
@@ -27,6 +33,13 @@ templates = Jinja2Templates(directory="templates")
 
 imageFetchers: dict[str, ImageFetcher] = {}
 streams: dict[str, Stream] = {}
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 def user_table_to_dict(table_index, soup):
     user_table = soup.find_all('table')[table_index] 
@@ -98,21 +111,24 @@ async def tag_recogn(request: Request, user: Union[str, str]):
     return resp
 
 @app.post("/stream/start", dependencies=[Depends(cookie)], status_code=200)
-async def accessing_camera( tags: TagDetail, session_id: UUID = Depends(cookie)):
+async def accessing_camera( tags: TagDetail, session_id: UUID = Depends(cookie), db: Session = Depends(get_db)):
     session_id = str(session_id)
+    cache_controller.remove_all_tags(db)
     fetcher = ImageFetcher(CAM_URL, session_id, 0.2)
-    fetcher.start()
-    stream = Stream(CAM_URL, tags.tags)
-    stream.start()
     imageFetchers[session_id] = fetcher
+    fetcher.start()
+    stream = Stream(CAM_URL, tags.tags, db)
     streams[session_id] = stream
+    stream.start()
+    print(streams, imageFetchers)
     return session_id
 
 @app.post("/stream/stop", dependencies=[Depends(cookie)], status_code=200)
-async def accessing_camera(response: Response, session_id_uuid: UUID = Depends(cookie)):
+async def accessing_camera(tags: TagDetail, response: Response, session_id_uuid: UUID = Depends(cookie)):
     session_id = str(session_id_uuid)
     imageFetchers[session_id].stop()
     streams[session_id].stop()
+    cache_controller.remove_tags(streams[session_id].db, tags.tags)
     if os.path.exists(f"static/img-{session_id}.jpg"):
         os.remove(f"static/img-{session_id}.jpg") #img-448dbfd3-9923-4638-9d18-8b8e059fcbf2.jpg
     del imageFetchers[session_id]
@@ -120,6 +136,18 @@ async def accessing_camera(response: Response, session_id_uuid: UUID = Depends(c
     await backend.delete(session_id_uuid)
     cookie.delete_from_response(response)
     return "deleted session"
+
+@app.get("/tag/detection/status", dependencies=[Depends(cookie)], status_code=200)
+async def tag_detection_status(tags: TagDetail, db: Session = Depends(get_db)):
+    response = []
+    for tag in tags.tags:
+        response.append(cache_controller.get_tag(db, tag).isDetected)
+    return response
+
+@app.get("/tag/detection")
+def get_all_tags(db: Session = Depends(get_db)):
+    response = cache_controller.add_tag(db, "test")
+    return response
 
 if __name__ == "__main__": 
     uvicorn.run(app, port=8080)

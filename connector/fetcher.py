@@ -7,10 +7,11 @@ import os
 from dotenv import load_dotenv
 import logging
 import pyttsx3
+from sqlalchemy.orm import Session
+from model import cache_controller
 
-from model.detect import Coords, Detect
-from model.recogn import Recogn
-from model.SQLconnector import DetectionCache
+from controller.detect import Coords, Detect
+from controller.recogn import Recogn
 
 logging.basicConfig(filename='fetcher.log', encoding='utf-8', level=logging.DEBUG)
 
@@ -44,16 +45,16 @@ class ImageFetcher(threading.Thread):
         self._stop_event.set()
 
 class Stream(threading.Thread):
-    def __init__(self, url: str, tags: list[str]):
+    def __init__(self, url: str, tags: list[str], db: Session):
         super().__init__()
         self.url: str = url
         self.tags: list[str] = []
-        detection_cache = DetectionCache()
+        self.db = db
         for tag in tags:
             processedTag = ''.join([char for char in tag if char.isalpha() or char.isdigit()])
             processedTag = processedTag.lower()
             self.tags.append(processedTag)
-            detection_cache.addTagDetectionCache(processedTag)
+            cache_controller.add_tag(self.db, processedTag)
         self.resp = []
         self._stop_event = threading.Event()
 
@@ -88,6 +89,7 @@ class Stream(threading.Thread):
                                     voice_response = f"Detected {processedResultText}"
                                     voice_engine.say(voice_response)
                                     voice_engine.runAndWait()
+                                    cache_controller.change_tag(self.db, resultText, True)
                                     logging.info(f"Detected: {resultText} With Confidence of {result[2]}")
                                 break
                             self.resp.append({"text": resultText, "confidence": result[2]})
