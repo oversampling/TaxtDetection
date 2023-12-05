@@ -6,15 +6,16 @@
 <body>
     <h1>Camera URL: {{ img_url }}</h1>
     <h1>Tag: {{ tags }}</h1>
-    <p><h3>
+    <div>
     {% for tag in (tags).split(",") %}
-       {{ loop.index }}: </i>{{ tag + " "}}</i>  <br/>
+       <div>{{ loop.index }}: </i>{{ tag + " "}}</i></div>
     {% endfor %}
-    </h3></p>
+    </div>
     <img name="main" id="main" width="640" height="480" src="{{ img_url }}">
     <button id="btn_start_cam">Start</button>
     <button id="btn_stop_cam">Stop</button>
     <script>
+        let tagsList = "{{ tags }}".split(",")
         let img = document.getElementById("main");
         let stream = "{{ img_url }}"
         function startStream(milliseconds) {
@@ -26,9 +27,8 @@
         function stopStream(interval) {
             clearInterval(interval);
         }
-        let tagsList = "{{ tags }}".split(",")
         let btn_start_cam = document.getElementById("btn_start_cam");
-        let interval;
+        let streamInterval, tagStatusInterval;
         btn_start_cam.addEventListener("click", async () => {
             let response = await fetch("/stream/start", {
                 method: "POST",
@@ -39,15 +39,42 @@
                 body: JSON.stringify({tags: tagsList}),
             });
             console.log(response)
-            interval = startStream(1000);
+            streamInterval = startStream(1000);
+            tagStatusInterval = startGetTagsStatusInterval(tagsList);
         });
         let btn_stop_cam = document.getElementById("btn_stop_cam");
         btn_stop_cam.addEventListener("click", () => {
             fetch("/stream/stop", {
                 method: "POST",
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                 },
+                body: JSON.stringify({tags: tagsList}),
             });
-            interval && stopStream(interval);
+            streamInterval && stopStream(streamInterval);
+            tagStatusInterval && stopGetTagsStatusInterval(tagStatusInterval);
         });
+        async function getTagsStatus(tagsList){
+            let response = await fetch("/tag/detection/status", {
+                method: "GET",
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                 },
+                body: JSON.stringify({tags: tagsList}),
+            });
+            console.log(response)
+            return response.json();
+        }
+        function startGetTagsStatusInterval(tagsList){
+            return setInterval(() => {
+                getTagsStatus(tagsList)
+            }, 5000)
+        }
+        function stopGetTagsStatusInterval(interval){
+            clearInterval(interval);
+        }
     </script>
 </body>
 </html>
