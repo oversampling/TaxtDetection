@@ -57,14 +57,15 @@
         });
         async function getTagsStatus(tagsList){
             let response = await fetch("/tag/detection/status", {
-                method: "GET",
+                method: "POST",
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                  },
                 body: JSON.stringify({tags: tagsList}),
             });
-            console.log(response)
+            let data = await response.json();
+            console.log(data);
             return response.json();
         }
         function startGetTagsStatusInterval(tagsList){

@@ -115,11 +115,11 @@ async def accessing_camera( tags: TagDetail, session_id: UUID = Depends(cookie),
     session_id = str(session_id)
     cache_controller.remove_all_tags(db)
     fetcher = ImageFetcher(CAM_URL, session_id, 0.2)
-    imageFetchers[session_id] = fetcher
-    fetcher.start()
     stream = Stream(CAM_URL, tags.tags, db)
-    streams[session_id] = stream
+    fetcher.start()
     stream.start()
+    streams[session_id] = stream
+    imageFetchers[session_id] = fetcher
     print(streams, imageFetchers)
     return session_id
 
@@ -137,16 +137,18 @@ async def accessing_camera(tags: TagDetail, response: Response, session_id_uuid:
     cookie.delete_from_response(response)
     return "deleted session"
 
-@app.get("/tag/detection/status", dependencies=[Depends(cookie)], status_code=200)
+@app.post("/tag/detection/status", dependencies=[Depends(cookie)], status_code=200)
 async def tag_detection_status(tags: TagDetail, db: Session = Depends(get_db)):
     response = []
     for tag in tags.tags:
-        response.append(cache_controller.get_tag(db, tag).isDetected)
+        processedTag = ''.join([char for char in tag if char.isalpha() or char.isdigit()])
+        response.append(cache_controller.get_tag(db, processedTag))
+        print(response)
     return response
 
 @app.get("/tag/detection")
 def get_all_tags(db: Session = Depends(get_db)):
-    response = cache_controller.add_tag(db, "test")
+    response = cache_controller.get_tag(db, "vtoe202011925")
     return response
 
 if __name__ == "__main__": 

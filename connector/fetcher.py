@@ -28,11 +28,13 @@ class ImageFetcher(threading.Thread):
         self._stop_event = threading.Event()
     
     def run(self):
+        print("Start image fetcher thread")
         while not self._stop_event.is_set():
             try:
                 response = requests.get(self.url)
                 with open(f"static/img-{self.session_id}.jpg", "wb") as f:
                     f.write(response.content)
+                    print(f"Writing to file: img-{self.session_id}.jpg")
                 # Send to recognition
             except Exception as e:
                 print(f"Error fetching image: {e}")
@@ -63,6 +65,7 @@ class Stream(threading.Thread):
         model = Detect("best.pt")
         detected_tag = {tag: False for tag in self.tags}
         voice_engine = pyttsx3.init()
+        print("Start stream thread")
         recog = Recogn()
         try:
             while not self._stop_event.is_set():
