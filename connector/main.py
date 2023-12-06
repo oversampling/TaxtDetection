@@ -142,13 +142,18 @@ async def tag_detection_status(tags: TagDetail, db: Session = Depends(get_db)):
     response = []
     for tag in tags.tags:
         processedTag = ''.join([char for char in tag if char.isalpha() or char.isdigit()])
+        processedTag = processedTag.lower()
         response.append(cache_controller.get_tag(db, processedTag))
-        print(response)
+        print("Processed Tag " + processedTag)
+        print("All tags")
+        print(cache_controller.get_tags(db))
+        print("Response from db")
+        print(cache_controller.get_tag(db, processedTag))
     return response
 
 @app.get("/tag/detection")
 def get_all_tags(db: Session = Depends(get_db)):
-    response = cache_controller.get_tag(db, "vtoe202011925")
+    response = cache_controller.get_tags(db)
     return response
 
 if __name__ == "__main__": 

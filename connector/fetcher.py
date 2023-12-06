@@ -64,7 +64,7 @@ class Stream(threading.Thread):
         # video = cv2.VideoCapture(0)
         model = Detect("best.pt")
         detected_tag = {tag: False for tag in self.tags}
-        voice_engine = pyttsx3.init()
+        # voice_engine = pyttsx3.init()
         print("Start stream thread")
         recog = Recogn()
         try:
@@ -88,10 +88,10 @@ class Stream(threading.Thread):
                             if resultText in self.tags:
                                 if detected_tag[resultText] != True:
                                     detected_tag[resultText] = True
-                                    processedResultText = ' '.join(c for c in resultText)
-                                    voice_response = f"Detected {processedResultText}"
-                                    voice_engine.say(voice_response)
-                                    voice_engine.runAndWait()
+                                    # processedResultText = ' '.join(c for c in resultText) 
+                                    # voice_response = f"Detected {processedResultText}"
+                                    # voice_engine.say(voice_response)
+                                    # voice_engine.runAndWait()
                                     cache_controller.change_tag(self.db, resultText, True)
                                     logging.info(f"Detected: {resultText} With Confidence of {result[2]}")
                                 break
