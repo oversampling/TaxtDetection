@@ -5,18 +5,28 @@
 </head>
 <body>
     <h1>Camera URL: {{ img_url }}</h1>
-    <h1>Tag: {{ tags }}</h1>
-    <div>
-    {% for tag in (tags).split(",") %}
-       <div>{{ loop.index }}: </i>{{ tag + " "}}</i></div>
-    {% endfor %}
-    </div>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>Tag</th>
+                <th>Detected</th>
+            </tr>
+        </thead>
+        <tbody id="tagsStatus">
+        </tbody>
+    </table>
     <img name="main" id="main" width="640" height="480" src="{{ img_url }}">
     <button id="btn_start_cam">Start</button>
     <button id="btn_stop_cam">Stop</button>
     <script>
         let tagsList = "{{ tags }}".split(",")
         let img = document.getElementById("main");
+        let tagsTable = document.getElementById("tagsStatus");
+        for (let tag of tagsList){
+            let processedTag = tag.replaceAll("-", "").toLowerCase();
+            tagsTable.innerHTML += `<tr><td>${tagsList.indexOf(tag) + 1}</td><td>${tag}</td><td id="${processedTag}" style="background: #F95738;">Not Detected</td></tr>`
+        }
         let stream = "{{ img_url }}"
         function startStream(milliseconds) {
             return setInterval(async () => {
@@ -38,7 +48,6 @@
                  },
                 body: JSON.stringify({tags: tagsList}),
             });
-            console.log(response)
             streamInterval = startStream(1000);
             tagStatusInterval = startGetTagsStatusInterval(tagsList);
         });
@@ -64,8 +73,17 @@
                  },
                 body: JSON.stringify({tags: tagsList}),
             });
-            let data = await response.json();
-            console.log(data);
+            let tagsDectected = await response.json();
+            for (let tagStatus of tagsDectected){
+                let tagStatusEle = document.getElementById(tagStatus['tag']);
+                if (tagStatus['isDetected']){
+                    tagStatusEle.innerHTML = "Detected";
+                    tagStatusEle.style.backgroundColor = "#7CE84A";
+                } else {
+                    tagStatusEle.innerHTML = "Not Detected";
+                    tagStatusEle.style.backgroundColor = "#F95738";
+                }
+            }
             return response;
         }
         function startGetTagsStatusInterval(tagsList){
