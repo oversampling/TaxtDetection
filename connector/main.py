@@ -1,11 +1,13 @@
-from typing import Union
+from datetime import timedelta, datetime
+from typing import Annotated, Union
 from bs4 import BeautifulSoup
+from fastapi.security import OAuth2PasswordBearer
 import requests
 import uvicorn
 import os
-from fastapi import Depends, FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from uuid import UUID, uuid4
@@ -16,17 +18,31 @@ from pydantic import BaseModel
 from model import cache_controller
 from model.SQLconnector import Base, engine, SessionLocal
 from sqlalchemy.orm import Session
+import starlette.status as status
+from controller.vis_connector import VIS
+from jose import JWTError, jwt
 
 Base.metadata.create_all(bind=engine)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 load_dotenv()
 CAM_URL = os.getenv("CAM_URL")
 RECONG_URL = os.getenv("RECONG_URL")
+VIS_URL = os.getenv("VIS_URL")
+VIS_USERLIST_URL = os.getenv("VIS_USERLIST_URL")
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = 'HS256'
+ACCESS_TOKEN_EXPIRE_MINUTES = 960
 
 app = FastAPI()
 
 class TagDetail(BaseModel):
     tags: list[str]
+
+class TokenData(BaseModel):
+    username: str
+    name: str
+    id: str
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -34,12 +50,47 @@ templates = Jinja2Templates(directory="templates")
 imageFetchers: dict[str, ImageFetcher] = {}
 streams: dict[str, Stream] = {}
 
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+async def verify_token(request: Request) -> TokenData:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    token = request.cookies.get("token")
+    if token is None:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("username")
+        name: str = payload.get("name")
+        id: str = payload.get("id")
+        if username is None or name is None or id is None:
+            raise credentials_exception
+        token_data = TokenData(username=username, name=name, id=id)
+    except JWTError:
+        # Delete session cookie 
+        request.cookies.pop("token")
+        raise credentials_exception
+    except Exception as e:
+        raise e
+    return token_data
 
 def user_table_to_dict(table_index, soup):
     user_table = soup.find_all('table')[table_index] 
@@ -93,6 +144,69 @@ def get_user_info(username: str, table_index: int):
     soup = BeautifulSoup(html_content, 'html.parser')
     return table_to_dict(table_index, soup)
 
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    redirect_url = request.url_for("users_list")
+    return RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
+
+@app.get("/login", response_class=HTMLResponse)
+async def login(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.post('/login', response_class=HTMLResponse)
+async def login(username: Annotated[str, Form()], password: Annotated[str, Form()], request: Request,  db: Session = Depends(get_db)):
+    try:
+        vis = VIS(VIS_URL, VIS_USERLIST_URL, username, password)
+        print("VIS cookies")
+        print(vis.cookies)
+    except Exception as e:
+        return templates.TemplateResponse("login.html", {"request": request, "msg": "Invalid username or password"}) 
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"username": vis.username, "name": vis.name, "id": str(uuid4())}, expires_delta=access_token_expires
+    )
+    # Turn vis.cookies dict into string
+    cookies = ";".join([f"{key}={value}" for key, value in vis.cookies.items()])
+    print(cookies)
+    cookies_in_cache = cache_controller.get_cookie(db, username)
+    print("Cookies in Cache")
+    print(cookies_in_cache)
+    if cookies_in_cache is None:
+        print("Add cookies")
+        cache_controller.add_cookie(db, username=username, cookie=cookies)
+    else:
+        print("Update cookies")
+        cache_controller.update_cookie(db, username=username, cookie=cookies)
+    print("Update cookies")
+    redirect_url = request.url_for("users_list")
+    redirect_response = RedirectResponse(redirect_url, status_code=status.HTTP_303_SEE_OTHER)
+    redirect_response.set_cookie("token", access_token)
+    return redirect_response
+    
+@app.post('/logout', response_class=HTMLResponse)
+async def logout(request: Request):
+    # verifier.logout()
+    return templates.TemplateResponse("home.html", {"request": request})
+
+@app.get("/userslist", response_class=HTMLResponse)
+async def users_list(request: Request, user: TokenData = Depends(verify_token), db: Session = Depends(get_db)):
+    data = cache_controller.get_cookie(db, user.username)
+    if data is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
+    if cache_controller.get_all_users(db) == []:
+        content = VIS.getUserList(db, data.cookie, VIS_USERLIST_URL)
+        employees = VIS.storeUserList(db, content)
+    else:
+        employees = cache_controller.get_all_users(db)
+    # Get User list from cache, if don't have, get from vis
+    return templates.TemplateResponse("userslist.html", {"request": request, "employees": employees})
+
+@app.get("/userslist/{user_id}", response_class=HTMLResponse)
+async def user_detail(request: Request, user_id: Union[str, str], user: TokenData = Depends(verify_token), db: Session = Depends(get_db)):
+    data = cache_controller.get_cookie(db, user.username)
+    user_infos = VIS.getUserDetails(user_id, data.cookie, VIS_USERLIST_URL)
+    print(user_infos)
+    return templates.TemplateResponse("user.html", {"request": request, "user_infos": user_infos, "tangible_assets_count": len(user_infos['assets'])})
 
 @app.get("/ipcam", response_class=HTMLResponse)
 async def tag_recogn(request: Request, user: Union[str, str]):   
@@ -155,6 +269,37 @@ async def tag_detection_status(tags: TagDetail, db: Session = Depends(get_db)):
 def get_all_tags(db: Session = Depends(get_db)):
     response = cache_controller.get_tags(db)
     return response
+
+@app.post("/cookie/add")
+def add_cookie(username: str, cache: str, db: Session = Depends(get_db)):
+    print(username, cache)
+    cache_controller.add_cookie(db, username=username, cache=cache)
+    result = cache_controller.get_cookies(db)
+    print(result)
+    return True
+
+@app.post("/tag/add")
+def add_tag(tag: str, db: Session = Depends(get_db)):
+    print(tag)
+    cache_controller.add_tag(db, tag=tag)
+    result = cache_controller.get_tags(db)
+    print(result)
+    return True
+
+@app.delete("/user/delete")
+def delete_user(username: str, db: Session = Depends(get_db)):
+    print(username)
+    cache_controller.remove_user(db, username=username)
+    result = cache_controller.get_all_users(db)
+    print(result)
+    return True
+
+@app.delete("/user/delete/all")
+def delete_all_users(db: Session = Depends(get_db)):
+    cache_controller.remove_all_users(db)
+    result = cache_controller.get_all_users(db)
+    print(result)
+    return True
 
 if __name__ == "__main__": 
     uvicorn.run(app, port=8080)

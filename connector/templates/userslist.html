@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=\, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div>
+        <button id="logout">Logout</button>
+    </div>
+    <div>
+        <h2>Search For Resignee</h2>
+        <input type="text" name="search" id="search">
+    </div>
+    <strong>User List</strong>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Employee ID</th>
+                <th>Department</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for employee in employees %}
+            <tr>
+                <td><a href="/userslist/{{ employee.db_id }}">{{ employee.name }}</a></td> 
+                <td>{{ employee.empl_id }}</td>
+                <td>{{ employee.department }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
