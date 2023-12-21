@@ -22,6 +22,8 @@ import starlette.status as status
 from controller.vis_connector import VIS
 from jose import JWTError, jwt
 
+import json
+
 Base.metadata.create_all(bind=engine)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -205,8 +207,8 @@ async def users_list(request: Request, user: TokenData = Depends(verify_token), 
 async def user_detail(request: Request, user_id: Union[str, str], user: TokenData = Depends(verify_token), db: Session = Depends(get_db)):
     data = cache_controller.get_cookie(db, user.username)
     user_infos = VIS.getUserDetails(user_id, data.cookie, VIS_USERLIST_URL)
-    print(user_infos)
-    return templates.TemplateResponse("user.html", {"request": request, "user_infos": user_infos, "tangible_assets_count": len(user_infos['assets'])})
+    tangible_assets_count = get_toOut_num(user_infos['assets'])
+    return templates.TemplateResponse("user.html", {"request": request, "user_infos": user_infos, "tangible_assets_count": tangible_assets_count})
 
 @app.get("/ipcam", response_class=HTMLResponse)
 async def tag_recogn(request: Request, user: Union[str, str]):   
@@ -300,6 +302,14 @@ def delete_all_users(db: Session = Depends(get_db)):
     result = cache_controller.get_all_users(db)
     print(result)
     return True
+
+def get_toOut_num(user_infos_asset):
+    toOut_num = 0
+    user_infos_asset = json.loads(user_infos_asset)
+    for asset in user_infos_asset:
+        if asset["Out By"] == "":
+            toOut_num += 1
+    return toOut_num
 
 if __name__ == "__main__": 
     uvicorn.run(app, port=8080)

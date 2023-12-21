@@ -28,9 +28,8 @@
     <img name="main" id="main" width="640" height="480" src="{{ img_url }}">
     <script>
         let tagsList = "{{ user_infos['assets'] }}"
-        console.log(tagsList)
-        tagsList = tagsList.replaceAll("&#39;", "\"")
-        tagsList = JSON.parse(tagsList);
+        tagsList = tagsList.replaceAll("&#39;", "\'").replaceAll("&#34;", "\"")
+        tagsList = JSON.parse(tagsList)
         let img = document.getElementById("main");
         let tagsTable = document.getElementById("tagsStatus");
         for (let tag of tagsList){

@@ -1,3 +1,4 @@
+import json
 import re
 import requests
 from bs4 import BeautifulSoup
@@ -192,8 +193,9 @@ class VIS:
                     table_keys[8]: columns[8].find('input').get("value").strip() if len(columns) > 8 else "",
                 }
                 table_details.append(table_detail)
-        
-        return table_details
+    
+        json_string = json.dumps(table_details)
+        return json_string
 
     def _get_user_detail(self, username: str):
         file_path = "./static/user_list/" + username + ".htm"
