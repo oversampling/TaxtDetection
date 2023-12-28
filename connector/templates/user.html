@@ -30,6 +30,7 @@
         let tagsList = "{{ user_infos['assets'] }}"
         tagsList = tagsList.replaceAll("&#39;", "\'").replaceAll("&#34;", "\"")
         tagsList = JSON.parse(tagsList)
+        tagsList = tagsList.filter(tag => tag['Out By'] == "")
         let img = document.getElementById("camera");
         let tagsTable = document.getElementById("tagsStatus");
         for (let tag of tagsList){
