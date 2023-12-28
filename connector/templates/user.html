@@ -25,19 +25,20 @@
     </table>
     <button id="btn_start_cam">Start</button>
     <button id="btn_stop_cam">Stop</button>
-    <img name="main" id="main" width="640" height="480" src="{{ img_url }}">
+    <img name="main" id="camera" width="640" height="480" hidden>
     <script>
         let tagsList = "{{ user_infos['assets'] }}"
         tagsList = tagsList.replaceAll("&#39;", "\'").replaceAll("&#34;", "\"")
         tagsList = JSON.parse(tagsList)
-        let img = document.getElementById("main");
+        let img = document.getElementById("camera");
         let tagsTable = document.getElementById("tagsStatus");
         for (let tag of tagsList){
             let processedTag = tag['Asset Tag'].replaceAll("-", "").toLowerCase();
             console.log(processedTag)
             tagsTable.innerHTML += `<tr><td>${tagsList.indexOf(tag) + 1}</td><td>${tag['Asset Tag']}</td><td id="${processedTag}" style="background: #F95738;">Not Detected</td></tr>`
         }
-        let stream = "{{ img_url }}"
+        let stream;
+        let camera = document.getElementById("camera");
         function startStream(milliseconds) {
             return setInterval(async () => {
                 image = stream + "?rand=" + new Date().getTime();
@@ -50,40 +51,60 @@
         let btn_start_cam = document.getElementById("btn_start_cam");
         let streamInterval, tagStatusInterval;
         btn_start_cam.addEventListener("click", async () => {
+            let body = []
+            for (let tag of tagsList){
+                body.push(tag['Asset Tag'])
+            }
             let response = await fetch("/stream/start", {
                 method: "POST",
+                credentials: "same-origin",
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                 },
-                body: JSON.stringify({tags: tagsList}),
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({tags: body}),
             });
+            let result = await response.json();
+            stream = result
+            camera.src = result;
+            camera.hidden = false;
             streamInterval = startStream(1000);
             tagStatusInterval = startGetTagsStatusInterval(tagsList);
         });
         let btn_stop_cam = document.getElementById("btn_stop_cam");
         btn_stop_cam.addEventListener("click", () => {
+            let body = []
+            for (let tag of tagsList){
+                body.push(tag['Asset Tag'])
+            }
             fetch("/stream/stop", {
                 method: "POST",
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                  },
-                body: JSON.stringify({tags: tagsList}),
+                body: JSON.stringify({tags: body}),
             });
             streamInterval && stopStream(streamInterval);
             tagStatusInterval && stopGetTagsStatusInterval(tagStatusInterval);
+            camera.hidden = true;   
+            camera.src = "";
         });
         async function getTagsStatus(tagsList){
+            let body = []
+            for (let tag of tagsList){
+                body.push(tag['Asset Tag'])
+            }
             let response = await fetch("/tag/detection/status", {
                 method: "POST",
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                  },
-                body: JSON.stringify({tags: tagsList}),
+                body: JSON.stringify({tags: body}),
             });
             let tagsDectected = await response.json();
+            console.log(tagsDectected)
             for (let tagStatus of tagsDectected){
                 let tagStatusEle = document.getElementById(tagStatus['tag']);
                 if (tagStatus['isDetected']){
