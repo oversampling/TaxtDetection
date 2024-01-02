@@ -150,6 +150,12 @@ class VIS:
         soup = BeautifulSoup(content, 'html.parser')
         user_detail = VIS._user_table_to_dict(0, soup=soup)
         asset_table_details = VIS._table_to_dict(1, soup=soup)
+        hardisk_table_details = VIS._harddisk_table_to_dict(2, soup=soup)
+        accessory_table_details = VIS._accessory_table_to_dict(3, soup=soup)
+        software_table_details = VIS._software_table_to_dict(4, soup=soup)
+        user_detail["hardisk"] = hardisk_table_details
+        user_detail["accessory"] = accessory_table_details
+        # user_detail["software"] = software_table_details
         user_detail["assets"] = asset_table_details
         return user_detail
         
@@ -194,6 +200,105 @@ class VIS:
                 }
                 table_details.append(table_detail)
     
+        json_string = json.dumps(table_details)
+        return json_string
+    
+    @staticmethod
+    def _harddisk_table_to_dict(table_index, soup):
+        table = soup.find_all('table')[table_index]
+        table_keys = []
+        ignore_key = ["Acknowledge", "Hard Disk Information"]
+        table_details = []
+        for index, row in enumerate(table.find_all('tr')):
+            if (index < 2):
+                columns = row.find_all("td")
+                for column in columns:
+                    if column.text not in ignore_key:
+                        table_keys.append(column.text)
+            elif (index == 2):
+                columns = row.find_all("th")
+                for column in columns:
+                    if column.text not in ignore_key:
+                        table_keys.append(column.text)
+            else:
+                columns = row.find_all("td")
+                table_detail = {
+                    table_keys[0]: columns[0].text.strip(),
+                    table_keys[1]: columns[1].text.strip(),
+                    table_keys[2]: columns[2].find('input').get("value").strip() if len(columns) > 2 else "",
+                    table_keys[3]: columns[3].find('input').get("value").strip() if len(columns) > 3 else "",
+                    table_keys[4]: columns[4].find('input').get("value").strip() if len(columns) > 4 else "",
+                    table_keys[5]: columns[5].find('input').get("value").strip() if len(columns) > 5 else "",
+                    table_keys[6]: columns[6].find('input').get("value").strip() if len(columns) > 6 else "",
+                }
+                table_details.append(table_detail)
+        json_string = json.dumps(table_details)
+        return json_string
+    
+    @staticmethod
+    def _accessory_table_to_dict(table_index, soup):
+        table = soup.find_all('table')[table_index]
+        table_keys = []
+        ignore_key = ["Acknowledge", "Accessory Information"]
+        table_details = []
+        for index, row in enumerate(table.find_all('tr')):
+            if (index < 2):
+                columns = row.find_all("td")
+                for column in columns:
+                    if column.text not in ignore_key:
+                        table_keys.append(column.text)
+            elif (index == 2):
+                columns = row.find_all("th")
+                for column in columns:
+                    if column.text not in ignore_key:
+                        table_keys.append(column.text)
+            else:
+                columns = row.find_all("td")
+                table_detail = {
+                    table_keys[0]: columns[0].text.strip(),
+                    table_keys[1]: columns[1].text.strip(),
+                    table_keys[2]: columns[2].text.strip(),
+                    table_keys[3]: columns[3].find('input').get("value").strip() if len(columns) > 3 else "",
+                    table_keys[4]: columns[4].find('input').get("value").strip() if len(columns) > 4 else "",
+                    table_keys[5]: columns[5].find('input').get("value").strip() if len(columns) > 5 else "",
+                    table_keys[6]: columns[6].find('input').get("value").strip() if len(columns) > 6 else "",
+                    table_keys[7]: columns[7].find('input').get("value").strip() if len(columns) > 7 else "",
+                    table_keys[8]: columns[8].find('input').get("value").strip() if len(columns) > 8 else "",
+                }
+                table_details.append(table_detail)
+        json_string = json.dumps(table_details)
+        return json_string
+    
+    @staticmethod
+    def _software_table_to_dict(table_index, soup):
+        table = soup.find_all('table')[table_index]
+        table_keys = []
+        ignore_key = ["Acknowledge", "Software Information"]
+        table_details = []
+        for index, row in enumerate(table.find_all('tr')):
+            if (index < 2):
+                columns = row.find_all("th")
+                for column in columns:
+                    if column.text not in ignore_key:
+                        table_keys.append(column.text)
+            elif (index == 2):
+                columns = row.find_all("th")
+                for column in columns:
+                    if column.text not in ignore_key:
+                        table_keys.append(column.text)
+            else:
+                columns = row.find_all("td")
+                table_detail = {
+                    table_keys[0]: columns[0].text.strip(),
+                    table_keys[1]: columns[1].text.strip(),
+                    table_keys[2]: columns[2].text.strip(),
+                    table_keys[3]: columns[3].find('input').get("value").strip() if len(columns) > 3 else "",
+                    table_keys[4]: columns[4].find('input').get("value").strip() if len(columns) > 4 else "",
+                    table_keys[5]: columns[5].find('input').get("value").strip() if len(columns) > 5 else "",
+                    table_keys[6]: columns[6].find('input').get("value").strip() if len(columns) > 6 else "",
+                    table_keys[7]: columns[7].find('input').get("value").strip() if len(columns) > 7 else "",
+                }
+                table_details.append(table_detail)
         json_string = json.dumps(table_details)
         return json_string
 
