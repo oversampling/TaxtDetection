@@ -6,37 +6,182 @@
     <title>Document</title>
 </head>
 <body>
-    <h1>{{ user_infos['Name'] }} </h1>
+    <h1><a href="{{ user_link }}">{{ user_infos['Name'] }}</a> </h1>
     <h2>{{ user_infos['Employee ID']}}</h2>
     <h2>{{ user_infos['Department']}}</h2>
     <h2>{{ user_infos['Position'] }}</h2>
-    <h2><strong>Total Assets to be collected <span id="tangilbe_asset_count">{{ tangible_assets_count }}</span></strong></h2>
-    <h2><strong>Total Non Tangible Assets <span id="non_tangilbe_asset_count">0</span></strong></h2>
+    <h2><strong>Total Assets to be collected <span id="tangilbe_asset_count">0</span></strong></h2>
     <table border="1">
         <thead>
             <tr>
                 <th>No</th>
                 <th>Tag</th>
-                <th>Detected</th>
+                <th>Collected</th>
             </tr>
         </thead>
-        <tbody id="tagsStatus">
+        <tbody id="collectableItems">
+        </tbody>
+    </table>
+    <br>
+    <h3>Asset Info</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Asset tag</th>
+                <th>Serial Number</th>
+                <th>Type</th>
+            </tr>
+        </thead>
+        <tbody id="assets">
+        </tbody>
+    </table>
+    <h3>Harddisk Info</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Harddisk Name</th>
+                <th>Serial Number</th>
+            </tr>
+        </thead>
+        <tbody id="harddisk">
+        </tbody>
+    </table>
+    <h3>Accessory Info</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Accessory Tag</th>
+                <th>Serial Number</th>
+                <th>Type</th>
+            </tr>
+        </thead>
+        <tbody id="accessories">
+        </tbody>
+    </table>
+    <h3>Software Info</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Software Name</th>
+                <th>License</th>
+            </tr>
+        </thead>
+        <tbody id="software">
+        </tbody>
+    </table>
+    <br>
+    <h3>History</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Item</th>
+                <th>Tag/Serial Number</th>
+                <th>Action</th>
+                <th>Reference</th>
+            </tr>
+        </thead>
+        <tbody id="history">
+
         </tbody>
     </table>
     <button id="btn_start_cam">Start</button>
     <button id="btn_stop_cam">Stop</button>
     <img name="main" id="camera" width="640" height="480" hidden>
     <script>
-        let tagsList = "{{ user_infos['assets'] }}"
-        tagsList = tagsList.replaceAll("&#39;", "\'").replaceAll("&#34;", "\"")
-        tagsList = JSON.parse(tagsList)
-        tagsList = tagsList.filter(tag => tag['Out By'] == "")
+        let collectable = document.getElementById("tangilbe_asset_count");
+        let totalCollectable = 0;
+        let assets = "{{ user_infos['assets'] }}".replaceAll("&#39;", "\'").replaceAll("&#34;", "\"")
+        let assetsTable = document.getElementById("assets");
+        let historyList = []
+        let collectableItems = []
+        for (let asset of JSON.parse(assets)){
+            historyList.push(asset)
+            if (asset["Out By"] != ""){
+                continue;
+            }
+            collectableItems.push(asset)
+            totalCollectable += 1;
+            assetsTable.innerHTML += `<tr><td>${asset['Asset Tag']}</td><td>${asset['Serial No.']}</td><td>${asset['Model']}</td></tr>`
+        }
+        let harddisks = "{{ user_infos['harddisk'] }}".replaceAll("&#39;", "\'").replaceAll("&#34;", "\"")
+        let harddiskTable = document.getElementById("harddisk");
+        for (let harddisk of JSON.parse(harddisks)){
+            historyList.push(harddisk)
+            if (harddisk["Out By"] != ""){
+                continue;
+            }
+            collectableItems.push(harddisk)
+            totalCollectable += 1;
+            harddiskTable.innerHTML += `<tr><td>${harddisk['Hard Disk']}</td><td>${harddisk['Serial No.']}</td></tr>`
+        }
+        let accessories = "{{ user_infos['accessory'] }}".replaceAll("&#39;", "\'").replaceAll("&#34;", "\"")
+        let accessoriesTable = document.getElementById("accessories");
+        for (let accessory of JSON.parse(accessories)){
+            historyList.push(accessory)
+            if (accessory["Out By"] != ""){
+                continue;
+            }
+            collectableItems.push(accessory)
+            totalCollectable += 1;
+            accessoriesTable.innerHTML += `<tr><td>${accessory['Asset Tag']}</td><td>${accessory['Serial No.']}</td><td>${accessory['Category']}</td></tr>`
+        }
+        let software = "{{ user_infos['software'] }}".replaceAll("&#39;", "\'").replaceAll("&#34;", "\"")
+        let softwareTable = document.getElementById("software");
+        for (let soft of JSON.parse(software)){
+            historyList.push(soft)
+            if (soft["Out By"] != ""){
+                continue;
+            }
+            softwareTable.innerHTML += `<tr><td>${soft['Software']}</td><td>${soft['License']}</td></tr>`
+        }
+        collectable.innerHTML = totalCollectable;
+        let historyTable = document.getElementById("history");
+        let sortedHistoryList = []
+        for (let history of historyList){
+            if (history["In By"] != ""){
+                sortedHistoryList.push({
+                    "date": history['In Date'],
+                    "item": history['Model'] || history['Hard Disk'] || history['Name'] + history["Category"]|| history['Software'],
+                    "tag": history['Asset Tag'] || history['Serial No.'],
+                    "action": "Acknowledged By " + history["In By"],
+                    "reference": []
+                })
+            }
+            if (history['Out By'] != ""){
+                sortedHistoryList.push({
+                    "date": history['Out Date'],
+                    "item": history['Model'] || history['Software'] || history['Hard Disk'] || history['Name'] + " " + history["Category"] ,
+                    "tag": history['Asset Tag'] || history['Serial No.'],
+                    "action": "Collected Back By " + history["Out By"],
+                    "reference": []
+                })
+            }
+        }
+        sortedHistoryList = sortedHistoryList.sort((a, b) => {
+            return new Date(b['date']) - new Date(a['date'])
+        })
+        let collectableItemTable = document.getElementById("collectableItems");
+        console.log(collectableItemTable)
+        for (let item of collectableItems){
+            collectableItemTable.innerHTML += `<tr><td>${collectableItems.indexOf(item) + 1}</td><td>${item['Asset Tag']}</td><td id="${processedTag}" style="background: #F95738;">Not Collected</td></tr>`
+        }
+        for (let history of sortedHistoryList){
+            historyTable.innerHTML += `<tr><td>${history['date']}</td><td>${history['item']}</td><td>${history['tag']}</td><td>${history['action']}</td><td>${history['reference']}</td></tr>`
+        }
+    </script>
+    <script>
+        // let tagsList = "{{ user_infos['assets'] }}" // TODO: Change to all Assets
+        let tagsList = collectableItems;
+        console.log(tagsList)
+        // tagsList = tagsList.replaceAll("&#39;", "\'").replaceAll("&#34;", "\"")
+        // tagsList = JSON.parse(tagsList)
+        // tagsList = tagsList.filter(tag => tag['Out By'] == "")
         let img = document.getElementById("camera");
-        let tagsTable = document.getElementById("tagsStatus");
+        let tagsTable = document.getElementById("collectableItems");
         for (let tag of tagsList){
             let processedTag = tag['Asset Tag'].replaceAll("-", "").toLowerCase();
-            console.log(processedTag)
-            tagsTable.innerHTML += `<tr><td>${tagsList.indexOf(tag) + 1}</td><td>${tag['Asset Tag']}</td><td id="${processedTag}" style="background: #F95738;">Not Detected</td></tr>`
+            tagsTable.innerHTML += `<tr><td>${tagsList.indexOf(tag) + 1}</td><td>${tag['Asset Tag']}</td><td id="${processedTag}" style="background: #F95738;">Not Collected</td></tr>`
         }
         let stream;
         let camera = document.getElementById("camera");
@@ -109,10 +254,13 @@
             for (let tagStatus of tagsDectected){
                 let tagStatusEle = document.getElementById(tagStatus['tag']);
                 if (tagStatus['isDetected']){
-                    tagStatusEle.innerHTML = "Detected";
+                    tagStatusEle.innerHTML = "Collected";
+                    let collectable = document.getElementById("tangilbe_asset_count");
+                    // Calculate number of collectable
+                    collectable.innerHTML = tagsList.length - tagsDectected.filter(tag => tag['isDetected']).length;
                     tagStatusEle.style.backgroundColor = "#7CE84A";
                 } else {
-                    tagStatusEle.innerHTML = "Not Detected";
+                    tagStatusEle.innerHTML = "Not Collected";
                     tagStatusEle.style.backgroundColor = "#F95738";
                 }
             }

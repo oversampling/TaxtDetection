@@ -207,8 +207,8 @@ async def users_list(request: Request, user: TokenData = Depends(verify_token), 
 async def user_detail(request: Request, user_id: Union[str, str], user: TokenData = Depends(verify_token), db: Session = Depends(get_db)):
     data = cache_controller.get_cookie(db, user.username)
     user_infos = VIS.getUserDetails(user_id, data.cookie, VIS_USERLIST_URL)
-    tangible_assets_count = get_toOut_num(user_infos['assets'])
-    return templates.TemplateResponse("user.html", {"request": request, "user_infos": user_infos, "tangible_assets_count": tangible_assets_count})
+    user_link = f'{VIS_USERLIST_URL}&&jid={user_id}'
+    return templates.TemplateResponse("user.html", {"request": request, "user_infos": user_infos, "user_link": user_link})
 
 @app.get("/ipcam", response_class=HTMLResponse)
 async def tag_recogn(request: Request, user: Union[str, str]):   

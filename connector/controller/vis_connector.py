@@ -153,9 +153,9 @@ class VIS:
         hardisk_table_details = VIS._harddisk_table_to_dict(2, soup=soup)
         accessory_table_details = VIS._accessory_table_to_dict(3, soup=soup)
         software_table_details = VIS._software_table_to_dict(4, soup=soup)
-        user_detail["hardisk"] = hardisk_table_details
+        user_detail["harddisk"] = hardisk_table_details
         user_detail["accessory"] = accessory_table_details
-        # user_detail["software"] = software_table_details
+        user_detail["software"] = software_table_details
         user_detail["assets"] = asset_table_details
         return user_detail
         
